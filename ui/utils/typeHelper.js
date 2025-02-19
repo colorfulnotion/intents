@@ -32,7 +32,10 @@ export const BridgeDataHelper = {
     return data.sourceTokenAddress;
   },
   getAmount: (data) => {
-    return data.amount;
+    return data.sendAmount;
+  },
+  getReceiveAmount: (data) => {
+    return data.receiveAmount;
   },
   getDestinationChainId: (data) => {
     return data.destinationChainId;
@@ -45,30 +48,48 @@ export const BridgeDataHelper = {
   },
   getEncodedBridgeData: (data) => {
     const encodedBridge = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["address", "address", "uint256", "uint256", "address", "address"],
       [
-        getFillerAddress(data),
-        getSourceTokenAddress(data),
-        getAmount(data),
-        getDestinationChainId(data),
-        getDestinationTokenAddress(data),
-        getBeneficiaryAddress(data),
+        "address",
+        "address",
+        "uint256",
+        "uint256",
+        "address",
+        "uint256",
+        "address",
+      ],
+      [
+        BridgeDataHelper.getFillerAddress(data),
+        BridgeDataHelper.getSourceTokenAddress(data),
+        BridgeDataHelper.getAmount(data),
+        BridgeDataHelper.getDestinationChainId(data),
+        BridgeDataHelper.getDestinationTokenAddress(data),
+        BridgeDataHelper.getReceiveAmount(data),
+        BridgeDataHelper.getBeneficiaryAddress(data),
       ]
     );
     return encodedBridge;
   },
   getDecodedBridgeData: (data) => {
     const decodedBridge = ethers.AbiCoder.defaultAbiCoder().decode(
-      ["address", "address", "uint256", "uint256", "address", "address"],
+      [
+        "address",
+        "address",
+        "uint256",
+        "uint256",
+        "address",
+        "uint256",
+        "address",
+      ],
       data
     );
     return {
       filler: decodedBridge[0],
       sourceTokenAddress: decodedBridge[1],
-      amount: decodedBridge[2],
+      sendAmount: decodedBridge[2],
       destinationChainId: decodedBridge[3],
       destinationTokenAddress: decodedBridge[4],
-      beneficiary: decodedBridge[5],
+      receiveAmount: decodedBridge[5],
+      beneficiary: decodedBridge[6],
     };
   },
 };

@@ -1,9 +1,11 @@
 import { zeroAddress } from "viem";
+import { TronWeb } from "tronweb";
 
 export const networkIds = {
   opstack: 357,
   sepolia: 11155111,
   ink: 763373,
+  nile: 1001,
 };
 
 const knownNetworks = {
@@ -32,6 +34,14 @@ const knownNetworks = {
     explorer: "https://explorer-jam-ccw030wxbz.t.conduit.xyz/",
     icon: "http://localhost:3000/op_stack.jpeg",
   },
+  [networkIds.nile]: {
+    name: "Nile",
+    chainId: 1001,
+    rpc: "https://nile.trongrid.io/jsonrpc/",
+    wss: "wss://nile.trongrid.io/jsonrpc/",
+    explorer: "https://nile.tronscan.org/",
+    icon: "https://api.rango.exchange/blockchains/tron.svg",
+  },
 };
 
 const knownContracts = {
@@ -39,6 +49,7 @@ const knownContracts = {
     [networkIds.sepolia]: "0x9065Bd9D33770B38cDAf0761Bc626cf5fA45ae68",
     [networkIds.ink]: "0x9065Bd9D33770B38cDAf0761Bc626cf5fA45ae68",
     [networkIds.opstack]: "0x9065Bd9D33770B38cDAf0761Bc626cf5fA45ae68",
+    [networkIds.nile]: "TDkT1GLv9hcKSDDr4o3UV1fCSidDB2DXQb",
   },
 };
 
@@ -73,6 +84,7 @@ const knownTokens = {
       [networkIds.sepolia]: "0xBF882Fc99800A93494fe4844DC0002FcbaA79A7A",
       [networkIds.ink]: "0xBF882Fc99800A93494fe4844DC0002FcbaA79A7A",
       [networkIds.opstack]: "0xBF882Fc99800A93494fe4844DC0002FcbaA79A7A",
+      [networkIds.nile]: "TCDPaTa98iJzhKbGhiGKNVYe8PcCkcDwqV",
     },
   },
   wbtc: {
@@ -84,6 +96,7 @@ const knownTokens = {
       [networkIds.sepolia]: "0xc580C2C0005798751cd0c221292667deeb991157",
       [networkIds.ink]: "0xc580C2C0005798751cd0c221292667deeb991157",
       [networkIds.opstack]: "0xc580C2C0005798751cd0c221292667deeb991157",
+      [networkIds.nile]: "TFQEom3VBtHznrWeZqwrzRkKajUXpocrmp",
     },
   },
 };
@@ -109,3 +122,7 @@ export const getToken = (chainId, symbol) => {
 export const getTokens = () => {
   return [knownTokens.usdt, knownTokens.wbtc];
 };
+
+export const nileTronWeb = new TronWeb({
+  fullHost: "https://nile.trongrid.io",
+});

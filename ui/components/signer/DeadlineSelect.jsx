@@ -93,7 +93,7 @@ const DeadlineItem = ({
           color: "#a0a0a0",
         }}
       >
-        {parseFloat(tokenAmount * deadline.fee).toFixed(2)} {tokenSymbol} (
+        {parseFloat(tokenAmount * deadline.fee).toFixed(5)} {tokenSymbol} (
         {deadline.fee * 100}% as a fee)
       </Typography>
     </Box>

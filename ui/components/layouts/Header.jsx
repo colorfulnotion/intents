@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { AppBar, Toolbar, Typography, Box } from "@mui/material";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import ConnectWallet from "./ConnectWallet";
 
 const Header = () => {
   return (
@@ -74,7 +75,8 @@ const Header = () => {
 
         {/* Right Section */}
         <Box sx={{ ml: "auto" }}>
-          <ConnectButton chainStatus="icon" />
+          {/* <ConnectButton chainStatus="icon" /> */}
+          <ConnectWallet />
         </Box>
       </Toolbar>
     </AppBar>

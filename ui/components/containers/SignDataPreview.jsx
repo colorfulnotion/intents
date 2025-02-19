@@ -5,6 +5,8 @@ import { Container, Box, Typography } from "@mui/material";
 import { quicksand } from "@/utils/fontHelper";
 
 const SignDataPreview = ({ orderData, permitData }) => {
+  // console.log(permitData);
+
   return (
     <Container
       maxWidth="md"
@@ -168,7 +170,7 @@ const SignDataPreview = ({ orderData, permitData }) => {
             className={quicksand.className}
             sx={{ fontSize: "1rem", fontWeight: "500" }}
           >
-            nonce : {permitData.nonce ? permitData.nonce : "unknown"}
+            nonce : {permitData.nonce}
           </Typography>
           <Typography
             variant="s"

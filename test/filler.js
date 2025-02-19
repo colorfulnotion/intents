@@ -1,9 +1,9 @@
 /*
-
 node filler.js '{\""permitsignature\"":\""0xff3ceb7bc063d79c17dedd078c16442d2a14454234a7bf796d60391bdf542b2807be6bbc444462d51765a260fe0cb3c75465f4fa58359d1062532316b9e21ab11c\"",\""permitrawbytes\"":\""0x000000000000000000000000e8b890e5e0e7f62e42aafa2477054e8bfcb48004000000000000000000000000f43a23374edb9092125bd2e8664d48cb5ce40a9a0000000000000000000000000000000000000000000000004563918244f40000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000679d4d85\"",\""ordersignature\"":\""0x87c8a4820c5559d52f6374a023e7450d31caf78d9ae79139481f7b1f996d7afc1e3a8131c0a4bf398e16c95a27e17e5a36f2c2d69b9136b7ac72a684847dd02d1c\"",\""orderrawbytes\"":\""0x000000000000000000000000f43a23374edb9092125bd2e8664d48cb5ce40a9a000000000000000000000000e8b890e5e0e7f62e42aafa2477054e8bfcb4800400000000000000000000000000000000000000000000000000000000679d3e490000000000000000000000000000000000000000000000000000000000aa36a700000000000000000000000000000000000000000000000000000000679d3f7500000000000000000000000000000000000000000000000000000000679d4d85e7916c0abb18c8d4e936c90c4b274f18cfea48ab9203ec4dd4e48f45a126d482000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bf882fc99800a93494fe4844dc0002fcbaa79a7a0000000000000000000000000000000000000000000000004563918244f400000000000000000000000000000000000000000000000000000000000000000165000000000000000000000000bf882fc99800a93494fe4844dc0002fcbaa79a7a000000000000000000000000e8b890e5e0e7f62e42aafa2477054e8bfcb48004\""}'
-
 */
+
 require("dotenv").config();
+
 const { providers, Wallet, ethers } = require("ethers");
 const { formatEther } = require("ethers/lib/utils");
 
@@ -36,7 +36,7 @@ const ADDRESS_INTENT_FACTORY_GLOBAL =
   "0x9065Bd9D33770B38cDAf0761Bc626cf5fA45ae68";
 
 // filler's wallet private key
-const fillerPrivateKey = process.env.FILLER_PRIVATE_KEY;
+const fillerPrivateKey = process.env.FILLER_PRIVATE_KEY_EVM;
 // variable for transation runtime result
 let txRecipt;
 
@@ -123,7 +123,15 @@ const validateSignature = async (inputData) => {
 
   // 5. Prepare some information
   bridgeData = ethers.utils.defaultAbiCoder.decode(
-    ["address", "address", "uint256", "uint256", "address", "address"],
+    [
+      "address",
+      "address",
+      "uint256",
+      "uint256",
+      "address",
+      "uint256",
+      "address",
+    ],
     values.orderData
   );
 
@@ -272,7 +280,15 @@ const submitPermit = async () => {
   let bridgeDataAfterDeploy = [...bridgeData];
   bridgeDataAfterDeploy[0] = await fillerSource.getAddress();
   const bridgeEncoded = ethers.utils.defaultAbiCoder.encode(
-    ["address", "address", "uint256", "uint256", "address", "address"], // Specify the types
+    [
+      "address",
+      "address",
+      "uint256",
+      "uint256",
+      "address",
+      "uint256",
+      "address",
+    ], // Specify the types
     bridgeDataAfterDeploy
   );
 
@@ -305,7 +321,15 @@ const fillOrder = async () => {
   let bridgeDataAfterDeploy = [...bridgeData];
   bridgeDataAfterDeploy[0] = await fillerDest.getAddress();
   const bridgeEncoded = ethers.utils.defaultAbiCoder.encode(
-    ["address", "address", "uint256", "uint256", "address", "address"], // Specify the types
+    [
+      "address",
+      "address",
+      "uint256",
+      "uint256",
+      "address",
+      "uint256",
+      "address",
+    ], // Specify the types
     bridgeDataAfterDeploy
   );
 

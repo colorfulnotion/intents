@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
 // import wagmi hooks
-import { useAccount, useSignTypedData, useSwitchChain } from "wagmi";
+import { useAccount, useSwitchChain } from "wagmi";
 // import mui components
 import { Container, Box, Typography, Button } from "@mui/material";
 import ReadMoreIcon from "@mui/icons-material/ReadMore";
@@ -15,7 +15,8 @@ import DeadlineSelect from "../signer/DeadlineSelect";
 import SignDataPreview from "./SignDataPreview";
 // import necessary objects
 import { quicksand } from "@/utils/fontHelper";
-import { getTokens } from "@/config/networks";
+import { getTokenPrice } from "@/utils/tokenPriceHelper";
+import { getTokens, networkIds } from "@/config/networks";
 import useOrderData from "@/hooks/useOrderData";
 import { DeadlineData } from "@/config/constants";
 
@@ -29,16 +30,36 @@ const BridgeToken = ({ handleSign }) => {
   const [orderData, permitData, validations, values, handlers] =
     useOrderData(manualRequest);
 
+  const [totalDistribution, setTotalDistribution] = useState(0);
+
   // preview enable / disable state hook
   const [previewEnabled, setPreviewEnabled] = useState(false);
 
   // wagmi hooks for account and chain select
   const { isConnected, chain: currentChain } = useAccount();
-  const { chains, isLoading } = useSwitchChain();
+  const { chains, switchChain, isLoading } = useSwitchChain();
+
+  useEffect(() => {
+    if (chains) {
+      if (chains.length < 4) {
+        chains.push({
+          id: 1001,
+          name: "Nile",
+        });
+      }
+    }
+  }, [chains]);
 
   // const variable for connected current chain
   const isChainConnected = !isLoading && isConnected;
-  const isSignable = !!orderData.intentAddress && !!permitData.spender;
+  const isSignable =
+    !!orderData.intentAddress &&
+    !!permitData.spender &&
+    !!isChainConnected &&
+    !!values.sourceChain &&
+    (currentChain.id === values.sourceChain.id ||
+      values.sourceChain.id === networkIds.nile) &&
+    !validations.amountValid;
 
   // effect hook for initialize source chain to current connected chain
   useEffect(() => {
@@ -67,6 +88,49 @@ const BridgeToken = ({ handleSign }) => {
       }
     }
   }, [orderData.intentAddress]);
+
+  // calculate user receive token amount
+  const calculateReceiveTokenAmount = async () => {
+    if (!values.sourceToken) return 0;
+    if (!values.destToken) return 0;
+    if (!values.tokenAmount) return 0;
+
+    const tokenAmount = parseFloat(values.tokenAmount);
+    const sourceTokenPrice = parseFloat(
+      await getTokenPrice(values.sourceToken.symbol)
+    );
+    const destTokenPrice = parseFloat(
+      await getTokenPrice(values.destToken.symbol)
+    );
+
+    setTotalDistribution((tokenAmount * sourceTokenPrice) / destTokenPrice);
+    const distribution = (tokenAmount * sourceTokenPrice) / destTokenPrice;
+    const fillerFee = distribution * DeadlineData[values.deadlineIndex].fee;
+
+    return distribution - fillerFee;
+  };
+
+  useEffect(() => {
+    (async () => {
+      const receiveAmount = await calculateReceiveTokenAmount();
+
+      handlers.setReceiveAmount(receiveAmount);
+    })();
+  }, [
+    values.sourceToken,
+    values.destToken,
+    values.tokenAmount,
+    values.deadlineIndex,
+  ]);
+
+  // handle fill max button click
+  const fillMaxButtonClick = () => {
+    const sourceTokenBalance = validations.sourceTokenBalance
+      ? validations.sourceTokenBalance
+      : 0;
+
+    handlers.setTokenAmount(ethers.formatEther(sourceTokenBalance));
+  };
 
   // const variable for render when loading connection
   const loadingConnection = (
@@ -99,7 +163,7 @@ const BridgeToken = ({ handleSign }) => {
           flex={3}
           flexDirection="column"
           justifyContent="center"
-          gap={3}
+          gap={4}
         >
           {/* Source Chain Select */}
           <Box
@@ -131,6 +195,31 @@ const BridgeToken = ({ handleSign }) => {
                 );
               })}
             ></ChainSelect>
+            {!!isChainConnected &&
+              !!values.sourceChain &&
+              currentChain.name !== values.sourceChain.name && (
+                <Typography
+                  variant="s"
+                  position="absolute"
+                  className={quicksand.className}
+                  sx={{
+                    top: "5rem",
+                    left: "0.5rem",
+                    fontSize: "0.8rem",
+                    fontWeight: "600",
+                    color: "#427BF3",
+                    cursor: "pointer",
+                    ":hover": {
+                      color: "#427BF3C0",
+                    },
+                  }}
+                  onClick={() =>
+                    switchChain({ chainId: values.sourceChain.id })
+                  }
+                >
+                  Switch network to {values.sourceChain.name}
+                </Typography>
+              )}
           </Box>
           {/* Source Token Form */}
           <Box
@@ -163,20 +252,25 @@ const BridgeToken = ({ handleSign }) => {
               placeHolder={"Enter an amount"}
               readOnly={false}
             ></TokenSelect>
-            <Typography
-              variant="s"
-              className={quicksand.className}
-              sx={{
-                fontSize: "1rem",
-                fontWeight: "600",
-                color: validations.amountValid ? "red" : "black",
-                pl: "0.5rem",
-              }}
+            <Box
+              width="100%"
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
             >
-              {validations.sourceTokenBalance &&
-                `${ethers.formatEther(validations.sourceTokenBalance)} 
+              <Typography
+                variant="s"
+                className={quicksand.className}
+                sx={{
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  color: validations.amountValid ? "red" : "black",
+                  pl: "0.5rem",
+                }}
+              >
+                {validations.sourceTokenBalance &&
+                  `${ethers.formatEther(validations.sourceTokenBalance)} 
               ${values.sourceToken.symbol}`}
-              {validations.sourceTokenBalance && (
                 <Typography
                   variant="s"
                   className={quicksand.className}
@@ -188,8 +282,27 @@ const BridgeToken = ({ handleSign }) => {
                 >
                   available
                 </Typography>
+              </Typography>
+              {!!validations.sourceTokenBalance && (
+                <Typography
+                  variant="s"
+                  className={quicksand.className}
+                  sx={{
+                    fontSize: "0.8rem",
+                    fontWeight: "600",
+                    color: "#427BF3",
+                    pr: "0.75rem",
+                    cursor: "pointer",
+                    ":hover": {
+                      color: "#427BF3C0",
+                    },
+                  }}
+                  onClick={fillMaxButtonClick}
+                >
+                  Fill max
+                </Typography>
               )}
-            </Typography>
+            </Box>
           </Box>
         </Box>
         <Box
@@ -208,7 +321,7 @@ const BridgeToken = ({ handleSign }) => {
           flex={3}
           flexDirection="column"
           justifyContent="center"
-          gap={3}
+          gap={4}
         >
           {/* Dest Chain Select */}
           <Box
@@ -237,6 +350,7 @@ const BridgeToken = ({ handleSign }) => {
               chains={chains.filter((chain) => {
                 return (
                   values.sourceChain === null ||
+                  values.sourceChain === undefined ||
                   chain.id !== values.sourceChain.id
                 );
               })}
@@ -267,15 +381,7 @@ const BridgeToken = ({ handleSign }) => {
               token={values.destToken}
               setToken={handlers.setDestToken}
               tokens={getTokens()}
-              tokenAmount={
-                values.tokenAmount
-                  ? parseFloat(values.tokenAmount) -
-                    parseFloat(
-                      values.tokenAmount *
-                        DeadlineData[values.deadlineIndex].fee
-                    )
-                  : 0
-              }
+              tokenAmount={parseFloat(values.receiveAmount).toFixed(6)}
               disabler={values.destChain}
               placeHolder={"Calculated amount"}
               readOnly={true}
@@ -306,7 +412,7 @@ const BridgeToken = ({ handleSign }) => {
           <DeadlineSelect
             deadlineIndex={values.deadlineIndex}
             setDeadlineIndex={handlers.setDeadlineIndex}
-            tokenAmount={values.tokenAmount}
+            tokenAmount={totalDistribution}
             tokenSymbol={values.destToken ? values.destToken.symbol : ""}
           />
         </Box>

@@ -25,9 +25,10 @@ struct GaslessCrossChainOrder {
 struct BridgeTransferData {
 	address filler; // Address of the filler (filler - who handles the user's order)
 	address sourceToken; // Token to be transferred from the source chain
-	uint256 amount; // Amount of tokens to transfer from source chain
+	uint256 sendAmount; // Amount of tokens to transfer from source chain
 	uint256 destinationChainId; // ID of the dest chain
 	address destinationToken; // Token to be received on the dest chain
+	uint256 receiveAmount; // Amount of tokens to receive from the dest chain
 	address beneficiary; // Address of the beneficiary receiving the tokens from the dest chain
 }
 
@@ -86,22 +87,24 @@ contract DualChainIntent is IDestinationSettler {
 		(
 			,
 			address srcToken, // Source token for the transfer
-			uint256 amt, // Amount of tokens to transfer
+			uint256 samt, // Amount of tokens to transfer
 			uint256 destChain, // Destination chain ID
 			address destToken, // Token to be received on the destination chain
+			uint256 ramt, // Amount of tokens to receive
 			address benef // Beneficiary receiving the tokens
 		) = abi.decode(
 				_order.orderData,
-				(address, address, uint256, uint256, address, address)
+				(address, address, uint256, uint256, address, uint256, address)
 			);
 
 		// Initialize the bridge transfer data structure with decoded values
 		bridgeData = BridgeTransferData({
 			filler: address(0), // Initially set filler to zero address
 			sourceToken: srcToken, // Set the source token
-			amount: amt, // Set the transfer amount
+			sendAmount: samt, // Set the transfer amount
 			destinationChainId: destChain, // Set the destination chain ID
 			destinationToken: destToken, // Set the destination token
+			receiveAmount: ramt, // Set the receive amount
 			beneficiary: benef // Set the beneficiary address
 		});
 	}
@@ -180,7 +183,7 @@ contract DualChainIntent is IDestinationSettler {
 		MockERC20(bridgeData.sourceToken).permit(
 			order.user,
 			order.intentAddress,
-			bridgeData.amount,
+			bridgeData.sendAmount,
 			order.fillDeadline,
 			v,
 			r,
@@ -191,7 +194,7 @@ contract DualChainIntent is IDestinationSettler {
 		IERC20(bridgeData.sourceToken).safeTransferFrom(
 			order.user,
 			order.intentAddress,
-			bridgeData.amount
+			bridgeData.sendAmount
 		);
 	}
 
@@ -241,18 +244,11 @@ contract DualChainIntent is IDestinationSettler {
 		// Mark the destination as fulfilled
 		destinationFulfilled = true;
 
-		// Get fee info from intent factory
-		(uint256 fee, uint256 multiplier) = IIntentFactory(intentFactory)
-			.getFeeInfo(bridgeData.destinationToken);
-
-		// Calculate fee amount that filler reducts
-		uint256 feeAmount = (bridgeData.amount * fee) / multiplier;
-
 		// Transfer tokens from the filler to the beneficiary
 		IERC20(bridgeData.destinationToken).safeTransferFrom(
 			bridgeData.filler, // From: filler address
 			bridgeData.beneficiary, // To: beneficiary address
-			bridgeData.amount - feeAmount // Amount to transfer
+			bridgeData.receiveAmount // Amount to transfer
 		);
 	}
 
@@ -294,12 +290,12 @@ contract DualChainIntent is IDestinationSettler {
 
 		// Check the balance of escrowed tokens in this contract
 		uint256 bal = IERC20(bridgeData.sourceToken).balanceOf(address(this));
-		require(bal >= bridgeData.amount, "Not enough escrow in contract");
+		require(bal >= bridgeData.sendAmount, "Not enough escrow in contract");
 
 		// Transfer the escrowed tokens from this contract to the filler
 		IERC20(bridgeData.sourceToken).safeTransfer(
 			bridgeData.filler, // Recipient: filler address
-			bridgeData.amount // Amount to transfer
+			bridgeData.sendAmount // Amount to transfer
 		);
 
 		// Mark the origin transfer as completed
@@ -343,7 +339,7 @@ contract DualChainIntent is IDestinationSettler {
 		// Transfer tokens back to the user
 		IERC20(bridgeData.sourceToken).safeTransfer(
 			order.user,
-			bridgeData.amount
+			bridgeData.sendAmount
 		);
 
 		// Emit the withdraw event that the user has withdrawn tokens back

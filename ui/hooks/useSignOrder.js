@@ -1,18 +1,46 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSignTypedData } from "wagmi";
 import { getContractAddress } from "@/config/networks";
+import { isTronChain } from "@/utils/tronHelper";
 
 const useSignOrder = (orderData) => {
+  const [orderSignedData, setOrderSignedData] = useState(null);
+  const [orderIsError, setOrderIsError] = useState(null);
+  const [orderIsSuccess, setOrderIsSuccess] = useState(null);
+
   const {
     signTypedData: signOrder,
-    data: orderSignedData,
-    isLoading: orderIsLoading,
-    isError: orderIsError,
-    isSuccess: orderIsSuccess,
-    error: orderError,
-    reset: orderReset,
-    variables: orderVariables,
+    data: evmOrderSignedData,
+    isError: evmOrderIsError,
+    isSuccess: evmOrderIsSuccess,
   } = useSignTypedData();
+  const [tronOrderSignedData, setTronOrderSignedData] = useState(null);
+  const [tronOrderIsError, setTronOrderIsError] = useState(null);
+  const [tronOrderIsSuccess, setTronOrderIsSuccess] = useState(null);
+
+  useEffect(() => {
+    if (orderData) {
+      setOrderSignedData(
+        isTronChain(orderData) ? tronOrderSignedData : evmOrderSignedData
+      );
+    }
+  }, [orderData, evmOrderSignedData, tronOrderSignedData]);
+
+  useEffect(() => {
+    if (orderData) {
+      setOrderIsSuccess(
+        isTronChain(orderData) ? tronOrderIsSuccess : evmOrderIsSuccess
+      );
+    }
+  }, [orderData, evmOrderIsSuccess, tronOrderIsSuccess]);
+
+  useEffect(() => {
+    if (orderData) {
+      setOrderIsError(
+        isTronChain(orderData) ? tronOrderIsError : evmOrderIsError
+      );
+    }
+  }, [orderData, evmOrderIsError, tronOrderIsError]);
 
   const orderDomain = orderData
     ? {
@@ -25,29 +53,24 @@ const useSignOrder = (orderData) => {
         ),
       }
     : null;
+  const orderType = {
+    Order: [
+      { name: "intentAddress", type: "address" },
+      { name: "user", type: "address" },
+      { name: "nonce", type: "uint256" },
+      { name: "sourceChainId", type: "uint256" },
+      { name: "openDeadline", type: "uint32" },
+      { name: "fillDeadline", type: "uint32" },
+      { name: "orderDataType", type: "bytes32" },
+      { name: "orderData", type: "bytes" },
+    ],
+  };
 
-  const doSignOrder = () => {
+  const doEvmSignOrder = () => {
     try {
       signOrder({
         domain: orderDomain,
-        types: {
-          EIP712Domain: [
-            { name: "name", type: "string" },
-            { name: "version", type: "string" },
-            { name: "chainId", type: "uint256" },
-            { name: "verifyingContract", type: "address" },
-          ],
-          Order: [
-            { name: "intentAddress", type: "address" },
-            { name: "user", type: "address" },
-            { name: "nonce", type: "uint256" },
-            { name: "sourceChainId", type: "uint256" },
-            { name: "openDeadline", type: "uint32" },
-            { name: "fillDeadline", type: "uint32" },
-            { name: "orderDataType", type: "bytes32" },
-            { name: "orderData", type: "bytes" },
-          ],
-        },
+        types: orderType,
         message: orderData,
         primaryType: "Order",
       });
@@ -56,22 +79,44 @@ const useSignOrder = (orderData) => {
     }
   };
 
-  useEffect(() => {
-    if (orderIsSuccess) {
-      console.log("Order signed successfully:", orderSignedData);
-    } else if (orderIsError) {
-      console.error("Error signing order:", orderError);
+  const doTronSignOrder = () => {
+    try {
+      const sign = async () => {
+        const signature = await window.tron.tronWeb.trx._signTypedData(
+          orderDomain,
+          orderType,
+          orderData
+        );
+        console.log("signature: ", signature);
+        setTronOrderSignedData(signature);
+        setTronOrderIsSuccess(true);
+        setTronOrderIsError(false);
+      };
+      sign();
+    } catch (e) {
+      console.log("Error: ", e.message);
+      setTronOrderIsSuccess(false);
+      setTronOrderIsError(true);
     }
-  }, [orderIsSuccess, orderIsError, orderSignedData, orderError, orderReset]);
+  };
+
+  const doSignOrder = () => {
+    if (orderData) {
+      if (isTronChain(orderData)) {
+        doTronSignOrder();
+      } else {
+        doEvmSignOrder();
+      }
+    } else {
+      console.log("Order data is not available");
+    }
+  };
 
   return {
     doSignOrder,
-    orderIsLoading,
     orderIsError,
     orderIsSuccess,
     orderSignedData,
-    orderError,
-    orderReset,
   };
 };
 

@@ -72,7 +72,7 @@ export function useSubmitOrder(
             });
           }
         } catch (err) {
-          console.error("Error posting signature:", err);
+          console.log("Error posting signature:", err);
         }
       }
     })();
